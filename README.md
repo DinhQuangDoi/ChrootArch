@@ -37,3 +37,7 @@ ChrootArch giúp bạn triển khai **môi trường Arch Linux hoàn chỉnh ng
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/DinhQuangDoi/ChrootArch/main/install.sh | bash
+```
+### Gỡ cài đặt 
+```bash
+curl -fsSL https://raw.githubusercontent.com/DinhQuangDoi/ChrootArch/main/scripts/uninstall.sh | bash
