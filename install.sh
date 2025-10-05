@@ -178,13 +178,27 @@ chmod +x "${BIN_DIR}/start-arch-x11"
 # ensure PATH has ~/.local/bin
 grep -q '\.local/bin' "${HOME}/.bashrc" 2>/dev/null || echo 'export PATH="$HOME/.local/bin:$PATH"' >> "${HOME}/.bashrc"
 
+# --- 5) Run firstboot automatically after install ----------------------------
 echo
-echo "[✓] Install completed."
-echo "• Scripts cached in: ${PAYLOAD_DIR}"
-echo "• Launchers created:"
-echo "    - start-arch       (CLI, no X11)"
-echo "    - start-arch-x11   (XFCE via Termux-X11)"
-echo
-echo "Next step (interactive):"
-echo "  → First boot(create sudo user, timezone etc)."
-echo "  → To start Arch: run 'start-arch-x11' (or 'start-arch' for CLI)."
+echo "[i] Running first-boot setup inside chroot (interactive)…"
+su -c "sh -s" <<'ROOT'
+set -eu
+mnt="/data/local/tmp/arch"
+BB="$(command -v busybox || echo /system/bin/busybox)"
+
+# đảm bảo các mount cần thiết
+ismounted(){ grep -q " $1 " /proc/mounts 2>/dev/null; }
+mkdir -p "$mnt/proc" "$mnt/sys" "$mnt/dev" "$mnt/dev/pts"
+ismounted "$mnt/proc"    || $BB mount -t proc  proc "$mnt/proc"
+ismounted "$mnt/sys"     || $BB mount -t sysfs sysfs "$mnt/sys"
+ismounted "$mnt/dev"     || $BB mount -o bind /dev "$mnt/dev"
+ismounted "$mnt/dev/pts" || $BB mount -t devpts devpts "$mnt/dev/pts"
+
+# chạy firstboot nếu chưa có user cấu hình
+if [ ! -f "$mnt/etc/arch-user.conf" ]; then
+  echo "[*] Launching /root/firstboot-arch.sh…"
+  $BB chroot "$mnt" /bin/bash -lc "/root/firstboot-arch.sh || true"
+else
+  echo "[✓] First-boot already completed (arch-user.conf exists). Skipping."
+fi
+ROOT
