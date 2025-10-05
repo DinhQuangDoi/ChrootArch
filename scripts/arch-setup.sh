@@ -12,6 +12,23 @@ MV_BIN="${PREFIX}/bin/mv"
 MKDIR_BIN="${PREFIX}/bin/mkdir"
 CAT_BIN="${PREFIX}/bin/cat"
 
+ARCH_TAR="${ROOT_TMP}/arch-rootfs.tar.gz"
+
+# 📦 Kiểm tra file rootfs đã tồn tại chưa
+if [ -f "$ARCH_TAR" ]; then
+    size=$(stat -c%s "$ARCH_TAR" 2>/dev/null || echo 0)
+    if [ "$size" -gt 300000000 ]; then
+        echo "[✓] Found existing rootfs (~$((size/1024/1024)) MB), skipping download."
+    else
+        echo "[!] Incomplete rootfs detected ($((size/1024/1024)) MB) → re-downloading..."
+        rm -f "$ARCH_TAR"
+        curl -L "$ARCH_URL" -o "$ARCH_TAR"
+    fi
+else
+    echo "[i] Downloading rootfs..."
+    curl -L "$ARCH_URL" -o "$ARCH_TAR"
+fi
+
 # 1) Create path for chroot-arch
 su -c "${MKDIR_BIN} -p '${ROOT_TMP}'"
 su -c "'${CURL_BIN}' -L '${ARCH_URL}' -o '${ROOT_TMP}/arch-rootfs.tar.gz'"
