@@ -5,39 +5,42 @@ ARCHROOT="/data/local/tmp/arch"
 ARCH_TAR="/data/local/tmp/arch-rootfs.tar.gz"
 LAUNCHERS="$HOME/.local/bin"
 
-echo "=== 🧹 Uninstall Chroot Arch ==="
+echo "=== 🧹 Uninstall Chroot Arch (safe) ==="
 
-# 1️⃣ Dừng tất cả tiến trình liên quan
-echo "[*] Killing related processes..."
+# 1) Dừng tiến trình liên quan (Termux-side)
+pkill -f com.termux.x11 || true
 pkill -f termux-x11 || true
 pkill -f Xwayland || true
 pkill -f pulseaudio || true
 pkill -f virgl_test_server_android || true
 
-# 2️⃣ Gỡ mount bind nếu còn tồn tại
-echo "[*] Unmounting bind mounts..."
-su -c "umount -lf ${ARCHROOT}/proc || true"
-su -c "umount -lf ${ARCHROOT}/sys || true"
-su -c "umount -lf ${ARCHROOT}/dev/pts || true"
-su -c "umount -lf ${ARCHROOT}/dev || true"
-su -c "umount -lf ${ARCHROOT}/media/sdcard || true"
-su -c "umount -lf ${ARCHROOT}/var/cache || true"
-su -c "umount -lf ${ARCHROOT}/dev/shm || true"
+# 2) Gỡ mount CHỈ dưới ${ARCHROOT}, theo thứ tự ngược (an toàn)
+su -c "sh -s" <<'ROOT'
+set -eu
+mnt="/data/local/tmp/arch"
+BB="$(command -v busybox || echo /data/adb/ksu/bin/busybox || echo /system/bin/busybox || echo busybox)"
 
-# 3️⃣ Xoá toàn bộ rootfs và file tar
-echo "[*] Removing rootfs and tarball..."
-su -c "rm -rf ${ARCHROOT} || true"
-su -c "rm -f ${ARCH_TAR} || true"
+# chỉ lấy các mount có đường dẫn bắt đầu bằng "$mnt/"
+awk '$2 ~ /^\/data\/local\/tmp\/arch\// {print $2}' /proc/mounts \
+  | sort -r \
+  | while read -r mp; do
+      $BB umount "$mp" 2>/dev/null || $BB umount -l "$mp" 2>/dev/null || true
+    done
 
-# 4️⃣ Xoá launcher đã tạo
-echo "[*] Removing launcher scripts..."
-rm -f "${LAUNCHERS}/start-arch" || true
-rm -f "${LAUNCHERS}/start-arch-x11" || true
+# cuối cùng thử các điểm chính (nếu còn)
+for mp in "$mnt/dev/pts" "$mnt/dev" "$mnt/proc" "$mnt/sys"; do
+  $BB umount "$mp" 2>/dev/null || $BB umount -l "$mp" 2>/dev/null || true
+done
+ROOT
 
-# 5️⃣ Xoá cache script nếu có
-echo "[*] Removing cached scripts..."
-rm -rf "$HOME/.local/share/arch-chroot" || true
+# 3) Xóa rootfs + tarball
+su -c "rm -rf '${ARCHROOT}'" || true
+su -c "rm -f '${ARCH_TAR}'" || true
 
-echo "[✓] Uninstall complete!"
-echo "➡️  Bạn có thể chạy lại quá trình cài đặt bằng lệnh:"
-echo "    curl -fsSL https://raw.githubusercontent.com/DinhQuangDoi/ChrootArch/main/install.sh | bash"
+# 4) Xóa launchers & cache
+rm -f "${LAUNCHERS}/start-arch" "${LAUNCHERS}/start-arch-x11" 2>/dev/null || true
+rm -rf "$HOME/.local/share/arch-chroot" 2>/dev/null || true
+rm -f  "$PREFIX/bin/start-arch" "$PREFIX/bin/start-arch-x11" 2>/dev/null || true
+
+echo "[✓] Uninstall done."
+echo "Nếu bộ nhớ trong chưa hiện lại, vui lòng REBOOT."
