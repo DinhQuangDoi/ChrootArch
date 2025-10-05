@@ -36,4 +36,4 @@ ChrootArch giúp bạn triển khai **môi trường Arch Linux hoàn chỉnh ng
 ### Chạy lệnh cài đặt (One-liner)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/DinhQuangDoi/ChrootArch/main/install.sh | bash# ChrootArch
+curl -fsSL https://raw.githubusercontent.com/DinhQuangDoi/ChrootArch/main/install.sh | bash
