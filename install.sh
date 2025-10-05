@@ -175,9 +175,16 @@ ROOT
 EOF
 chmod +x "${BIN_DIR}/start-arch-x11"
 
-# ensure PATH has ~/.local/bin
-grep -q '\.local/bin' "${HOME}/.bashrc" 2>/dev/null || echo 'export PATH="$HOME/.local/bin:$PATH"' >> "${HOME}/.bashrc"
+# --- Copy launchers into $PREFIX/bin (B) -------------------------------------
+TERMUX_BIN="${TERMUX_PREFIX}/bin"
+install -m 700 "${BIN_DIR}/start-arch"      "${TERMUX_BIN}/start-arch"      || true
+install -m 700 "${BIN_DIR}/start-arch-x11"  "${TERMUX_BIN}/start-arch-x11"  || true
 
+# kiểm tra nhanh
+if ! command -v start-arch >/dev/null 2>&1; then
+  echo "[!] Không tìm thấy start-arch trong PATH dù đã copy vào \$PREFIX/bin."
+  echo "    Kiểm tra: ls -l '${TERMUX_BIN}/start-arch'"
+fi
 # 🔎 Tìm busybox và su khả dụng
 BB="$(su -c 'command -v busybox || echo /system/bin/busybox || echo /data/adb/ksu/bin/busybox || echo busybox')"
 SUCMD="$(command -v su || echo /system/bin/su)"
