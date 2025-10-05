@@ -28,8 +28,8 @@ ChrootArch giúp bạn triển khai **môi trường Arch Linux hoàn chỉnh ng
 
 ### Cài Termux + Termux-X11
 
-- [Termux (Github Release)]([https://f-droid.org/packages/com.termux/](https://github.com/termux/termux-app/releases))
-- [Termux-X11 (Github Release)]([https://f-droid.org/packages/com.termux.x11/](https://github.com/termux/termux-x11/releases))
+- [Termux (Github Release)](https://github.com/termux/termux-app/releases)
+- [Termux-X11 (Github Release)](https://github.com/termux/termux-x11/releases)
 
 ---
 
