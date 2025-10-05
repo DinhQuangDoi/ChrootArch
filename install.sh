@@ -51,8 +51,8 @@ bash "${PAYLOAD_DIR}/arch-setup.sh"
 # ---- 3) Stage first-boot into rootfs & run it inside chroot ------------------
 echo "[i] Staging firstboot-arch.sh into ${ARCHROOT}/root …"
 su -c "mkdir -p '${ARCHROOT}/root'"
-su -c "cp '${PAYLOAD_DIR}/firstboot-arch.sh' '${ARCHROOT}/root/firstboot-arch.sh'"
-su -c "chmod 700 '${ARCHROOT}/root/firstboot-arch.sh'"
+su -c "cp '${PAYLOAD_DIR}/arch-first-boot.sh' '${ARCHROOT}/root/arch-first-boot.sh'"
+su -c "chmod 700 '${ARCHROOT}/root/arch-first-boot.sh'"
 
 echo "[i] Entering chroot to run first-boot (this step is INTERACTIVE) …"
 su -c "sh -s" <<'ROOT'
