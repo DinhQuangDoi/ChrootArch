@@ -25,7 +25,7 @@ export DEBIAN_FRONTEND=noninteractive
 
 # ---- Pull scripts from repo --------------------------------------------------
 echo "[i] Fetching scripts from $RAW_BASE …"
-SCRIPTS=(termux-setup.sh arch-setup.sh firstboot-arch.sh)
+SCRIPTS=(termux-setup.sh arch-setup.sh arch-first-boot.sh)
 for f in "${SCRIPTS[@]}"; do
   fetch "${RAW_BASE}/scripts/${f}" "${PAYLOAD_DIR}/${f}"
   chmod +x "${PAYLOAD_DIR}/${f}"
@@ -49,7 +49,7 @@ echo "[i] Running arch-setup.sh …"
 bash "${PAYLOAD_DIR}/arch-setup.sh"
 
 # ---- 3) Stage first-boot into rootfs & run it inside chroot ------------------
-echo "[i] Staging firstboot-arch.sh into ${ARCHROOT}/root …"
+echo "[i] Staging arch-first-boot.sh into ${ARCHROOT}/root …"
 su -c "mkdir -p '${ARCHROOT}/root'"
 su -c "cp '${PAYLOAD_DIR}/arch-first-boot.sh' '${ARCHROOT}/root/arch-first-boot.sh'"
 su -c "chmod 700 '${ARCHROOT}/root/arch-first-boot.sh'"
@@ -71,7 +71,7 @@ ismounted "$mnt/dev"     || $BB mount -o bind /dev "$mnt/dev"
 ismounted "$mnt/dev/pts" || $BB mount -t devpts devpts "$mnt/dev/pts"
 
 # Run first-boot (prompts for user/pass, timezone, locale…)
-$BB chroot "$mnt" /bin/bash -lc "/root/firstboot-arch.sh || true"
+$BB chroot "$mnt" /bin/bash -lc "/root/arch-first-boot.sh || true"
 ROOT
 
 # ---- 4) Create Termux launchers ----------------------------------------------
