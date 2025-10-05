@@ -178,27 +178,27 @@ chmod +x "${BIN_DIR}/start-arch-x11"
 # ensure PATH has ~/.local/bin
 grep -q '\.local/bin' "${HOME}/.bashrc" 2>/dev/null || echo 'export PATH="$HOME/.local/bin:$PATH"' >> "${HOME}/.bashrc"
 
-# --- 5) Run firstboot automatically after install ----------------------------
-echo
-echo "[i] Running first-boot setup inside chroot (interactive)…"
-su -c "sh -s" <<'ROOT'
+# 🔎 Tìm busybox và su khả dụng
+BB="$(su -c 'command -v busybox || echo /system/bin/busybox || echo /data/adb/ksu/bin/busybox || echo busybox')"
+SUCMD="$(command -v su || echo /system/bin/su)"
+
+# --- Mount chroot ---
+$SUCMD -c "sh -s" <<'ROOT'
 set -eu
 mnt="/data/local/tmp/arch"
-BB="$(command -v busybox || echo /system/bin/busybox)"
-
-# đảm bảo các mount cần thiết
+BB="$(command -v busybox || echo busybox)"
 ismounted(){ grep -q " $1 " /proc/mounts 2>/dev/null; }
 mkdir -p "$mnt/proc" "$mnt/sys" "$mnt/dev" "$mnt/dev/pts"
 ismounted "$mnt/proc"    || $BB mount -t proc  proc "$mnt/proc"
 ismounted "$mnt/sys"     || $BB mount -t sysfs sysfs "$mnt/sys"
 ismounted "$mnt/dev"     || $BB mount -o bind /dev "$mnt/dev"
 ismounted "$mnt/dev/pts" || $BB mount -t devpts devpts "$mnt/dev/pts"
-
-# chạy firstboot nếu chưa có user cấu hình
-if [ ! -f "$mnt/etc/arch-user.conf" ]; then
-  echo "[*] Launching /root/arch-first-boot.sh…"
-  $BB chroot "$mnt" /bin/bash -lc "/root/arch-first-boot.sh || true"
-else
-  echo "[✓] First-boot already completed (arch-user.conf exists). Skipping."
-fi
 ROOT
+
+# --- Chạy arch-first-boot.sh ---
+if [ ! -f "/data/local/tmp/arch/etc/arch-user.conf" ]; then
+  echo "[i] Running /root/arch-first-boot.sh (interactive)…"
+  $SUCMD -c "$BB chroot /data/local/tmp/arch /bin/bash -lc /root/arch-first-boot.sh"
+else
+  echo "[✓] arch-first-boot đã chạy trước đó — bỏ qua."
+fi
