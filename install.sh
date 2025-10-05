@@ -196,8 +196,8 @@ ismounted "$mnt/dev/pts" || $BB mount -t devpts devpts "$mnt/dev/pts"
 
 # chạy firstboot nếu chưa có user cấu hình
 if [ ! -f "$mnt/etc/arch-user.conf" ]; then
-  echo "[*] Launching /root/firstboot-arch.sh…"
-  $BB chroot "$mnt" /bin/bash -lc "/root/firstboot-arch.sh || true"
+  echo "[*] Launching /root/arch-first-boot.sh…"
+  $BB chroot "$mnt" /bin/bash -lc "/root/arch-first-boot.sh || true"
 else
   echo "[✓] First-boot already completed (arch-user.conf exists). Skipping."
 fi
