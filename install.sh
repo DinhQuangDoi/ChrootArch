@@ -165,11 +165,29 @@ EOF
 chmod +x "${BIN_DIR}/start-arch-x11"
 
 # ====== ENSURE PATH ======
-if ! grep -q '\.local/bin' "${HOME}/.bashrc" 2>/dev/null; then
-  echo 'export PATH="$HOME/.local/bin:$PATH"' >> "${HOME}/.bashrc"
-fi
+echo "[i] Ensuring ~/.local/bin is in PATH ..."
+for shellrc in "${HOME}/.bashrc" "${HOME}/.zshrc" "${HOME}/.profile"; do
+  grep -qxF 'export PATH="$HOME/.local/bin:$PATH"' "$shellrc" 2>/dev/null || echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$shellrc"
+done
+
+# thêm vào PATH phiên hiện tại (rất quan trọng)
 export PATH="$HOME/.local/bin:$PATH"
 hash -r
+
+# kiểm tra start-arch tồn tại & chạy được
+if ! command -v start-arch >/dev/null 2>&1; then
+  echo "[!] Launcher không nằm trong PATH, thử chạy trực tiếp:"
+  echo "    ~/.local/bin/start-arch"
+  chmod +x ~/.local/bin/start-arch 2>/dev/null || true
+  chmod +x ~/.local/bin/start-arch-x11 2>/dev/null || true
+fi
+
+# ====== SELF-TEST ======
+echo "[✓] Install completed!"
+echo "• Run 'start-arch' for CLI chroot"
+echo "• Run 'start-arch-x11' for XFCE + Termux-X11"
+echo "[i] Launching start-arch for initial test..."
+~/.local/bin/start-arch || true
 
 # ====== SELF-TEST ======
 echo "[✓] Install completed!"
