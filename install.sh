@@ -1,5 +1,5 @@
 #!/data/data/com.termux/files/usr/bin/bash
-# ChrootArch :: install.sh — full bootstrap installer
+# ChrootArch :: install.sh — Full auto bootstrap installer
 set -euo pipefail
 
 # ====== CONFIG ======
@@ -9,7 +9,6 @@ BIN_DIR="${HOME}/.local/bin"
 PAYLOAD_DIR="${HOME}/.local/share/arch-chroot"
 CONF_DIR="${HOME}/.config/arch-chroot"
 TERMUX_PREFIX="/data/data/com.termux/files/usr"
-
 SCRIPTS=(termux-setup.sh arch-setup.sh arch-first-boot.sh)
 
 # ====== PRECHECK ======
@@ -68,7 +67,7 @@ ROOT
 # ====== CREATE LAUNCHERS ======
 echo "[i] Creating launchers in ${BIN_DIR} …"
 
-# ---- start-arch ----
+# --- start-arch ---
 {
 cat > "${BIN_DIR}/start-arch" <<'EOF'
 #!/data/data/com.termux/files/usr/bin/bash
@@ -118,7 +117,7 @@ EOF
 }
 chmod +x "${BIN_DIR}/start-arch"
 
-# ---- start-arch-x11 (giữ nguyên bản cũ, chỉ tải fallback nếu lỗi) ----
+# --- start-arch-x11 ---
 {
 cat > "${BIN_DIR}/start-arch-x11" <<'EOF'
 #!/data/data/com.termux/files/usr/bin/bash
@@ -164,31 +163,19 @@ EOF
 }
 chmod +x "${BIN_DIR}/start-arch-x11"
 
-# ✅ Ensure ~/.local/bin is in PATH for current and future sessions
+# ====== ENSURE PATH ======
 echo "[i] Adding ~/.local/bin to PATH..."
 for shellrc in "$HOME/.bashrc" "$HOME/.zshrc" "$HOME/.profile"; do
   grep -qxF 'export PATH="$HOME/.local/bin:$PATH"' "$shellrc" 2>/dev/null || echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$shellrc"
 done
-
-# ✅ Add to current session PATH
 export PATH="$HOME/.local/bin:$PATH"
 hash -r
 
-# ✅ Check if command now resolves
-if ! command -v start-arch >/dev/null 2>&1; then
-  echo "[!] PATH chưa nhận launcher — dùng lệnh đầy đủ: ~/.local/bin/start-arch"
-fi
-
 # ====== SELF-TEST ======
 echo "[✓] Install completed!"
 echo "• Run 'start-arch' for CLI chroot"
 echo "• Run 'start-arch-x11' for XFCE + Termux-X11"
 echo "[i] Launching start-arch for initial test..."
-~/.local/bin/start-arch || true
-
-# ====== SELF-TEST ======
-echo "[✓] Install completed!"
-echo "• Run 'start-arch' for CLI chroot"
-echo "• Run 'start-arch-x11' for XFCE + Termux-X11"
-echo "[i] Launching start-arch for initial test..."
-start-arch
+"$HOME/.local/bin/start-arch" || {
+  echo "[!] Không thể khởi chạy ngay — hãy thoát Termux rồi mở lại và gõ: start-arch"
+}
