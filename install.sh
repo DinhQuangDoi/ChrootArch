@@ -164,22 +164,19 @@ EOF
 }
 chmod +x "${BIN_DIR}/start-arch-x11"
 
-# ====== ENSURE PATH ======
-echo "[i] Ensuring ~/.local/bin is in PATH ..."
-for shellrc in "${HOME}/.bashrc" "${HOME}/.zshrc" "${HOME}/.profile"; do
+# ✅ Ensure ~/.local/bin is in PATH for current and future sessions
+echo "[i] Adding ~/.local/bin to PATH..."
+for shellrc in "$HOME/.bashrc" "$HOME/.zshrc" "$HOME/.profile"; do
   grep -qxF 'export PATH="$HOME/.local/bin:$PATH"' "$shellrc" 2>/dev/null || echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$shellrc"
 done
 
-# thêm vào PATH phiên hiện tại (rất quan trọng)
+# ✅ Add to current session PATH
 export PATH="$HOME/.local/bin:$PATH"
 hash -r
 
-# kiểm tra start-arch tồn tại & chạy được
+# ✅ Check if command now resolves
 if ! command -v start-arch >/dev/null 2>&1; then
-  echo "[!] Launcher không nằm trong PATH, thử chạy trực tiếp:"
-  echo "    ~/.local/bin/start-arch"
-  chmod +x ~/.local/bin/start-arch 2>/dev/null || true
-  chmod +x ~/.local/bin/start-arch-x11 2>/dev/null || true
+  echo "[!] PATH chưa nhận launcher — dùng lệnh đầy đủ: ~/.local/bin/start-arch"
 fi
 
 # ====== SELF-TEST ======
