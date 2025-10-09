@@ -1,7 +1,5 @@
 #!/data/data/com.termux/files/usr/bin/bash
-# mirrorfix.sh — Fix broken ArchLinuxARM mirrors automatically
 set -euo pipefail
-
 ARCHROOT="/data/local/tmp/arch"
 PACMAN="$ARCHROOT/usr/bin/pacman"
 MIRRORLIST="$ARCHROOT/etc/pacman.d/mirrorlist"
@@ -9,8 +7,8 @@ MIRRORLIST="$ARCHROOT/etc/pacman.d/mirrorlist"
 msg() { echo -e "\033[1;96m[*]\033[0m $*"; }
 err() { echo -e "\033[1;91m[!]\033[0m $*" >&2; }
 
-# Ensure chroot exists
-if [ ! -x "$PACMAN" ]; then
+# Ensure chroot and pacman exist (check via su)
+if ! su -c "[ -x '$PACMAN' ]"; then
   err "Arch chroot not found or pacman missing at $PACMAN"
   exit 1
 fi
