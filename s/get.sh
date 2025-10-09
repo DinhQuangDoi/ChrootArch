@@ -41,8 +41,8 @@ fi
 msg "Configuring basic network files..."
 su -c "mkdir -p '$ARCHROOT/etc'"
 
-# tạo file tạm trong /data/local/tmp
-cat > /data/local/tmp/resolv.conf <<'EOF_RESOLV'
+# /data/local/tmp/arch
+cat > /data/local/tmp/arch/resolv.conf <<'EOF_RESOLV'
 # Content
 nameserver 8.8.8.8
 nameserver 8.8.4.4
