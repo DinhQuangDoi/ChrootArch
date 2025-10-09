@@ -41,18 +41,19 @@ fi
 msg "Configuring basic network files..."
 su -c "mkdir -p '$ARCHROOT/etc'"
 
-# /data/local/tmp/arch
-cat > /data/local/tmp/resolv.conf <<'EOF_RESOLV'
+# Create file in /data/local/tmp
+su -c "cat > /data/local/tmp/resolv.conf <<'EOF_RESOLV'
 # Content
 nameserver 8.8.8.8
 nameserver 8.8.4.4
-EOF_RESOLV
+EOF_RESOLV"
 
-cat > /data/local/tmp/hosts <<'EOF_HOSTS'
+su -c "cat > /data/local/tmp/hosts <<'EOF_HOSTS'
 # Content
 127.0.0.1 localhost
-EOF_HOSTS
+EOF_HOSTS"
 
+# Move
 su -c "mv -vf /data/local/tmp/resolv.conf '$ARCHROOT/etc/resolv.conf'"
 su -c "mv -vf /data/local/tmp/hosts '$ARCHROOT/etc/hosts'"
 # Copy script setup to rootfs
