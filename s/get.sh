@@ -16,12 +16,10 @@ need tar
 need su
 
 msg "Preparing /data/local/tmp/arch ..."
-# Create rootfs path
 su -c "mkdir -p '$ARCHROOT' && chmod 755 '$ARCHROOT'" || {
     echo "[!] Failed to create $ARCHROOT (check root access)"; exit 1;
 }
 
-# Download arch rootfs pack
 if [ ! -s "$ROOTFS_TAR" ]; then
   msg "Downloading ArchLinuxARM rootfs (≈ 500 MB)..."
   curl -fL "$ROOTFS_URL" -o "$ROOTFS_TAR"
@@ -29,7 +27,6 @@ else
   msg "Found existing rootfs archive — skipping download."
 fi
 
-# Extract rootfs
 if ! su -c "[ -x '$ARCHROOT/bin/bash' ]"; then
   msg "Extracting rootfs (requires root)..."
   su -c "$PREFIX/bin/tar -xzf '$ROOTFS_TAR' -C '$ARCHROOT'"
@@ -37,26 +34,26 @@ else
   msg "Rootfs already extracted — skipping."
 fi
 
-# Create resolv.conf & hosts
 msg "Configuring basic network files..."
 su -c "mkdir -p '$ARCHROOT/etc'"
 
-# Create file in /data/local/tmp
-su -c "cat > /data/local/tmp/resolv.conf <<'EOF_RESOLV'
+TMPDIR="$PREFIX/tmp"
+mkdir -p "$TMPDIR"
+
+cat > "$TMPDIR/resolv.conf" <<'EOF_RESOLV'
 # Content
 nameserver 8.8.8.8
 nameserver 8.8.4.4
-EOF_RESOLV"
+EOF_RESOLV
 
-su -c "cat > /data/local/tmp/hosts <<'EOF_HOSTS'
+cat > "$TMPDIR/hosts" <<'EOF_HOSTS'
 # Content
 127.0.0.1 localhost
-EOF_HOSTS"
+EOF_HOSTS
 
-# Move
-su -c "mv -vf /data/local/tmp/resolv.conf '$ARCHROOT/etc/resolv.conf'"
-su -c "mv -vf /data/local/tmp/hosts '$ARCHROOT/etc/hosts'"
-# Copy script setup to rootfs
+su -c "mv -vf '$TMPDIR/resolv.conf' '$ARCHROOT/etc/resolv.conf'"
+su -c "mv -vf '$TMPDIR/hosts' '$ARCHROOT/etc/hosts'"
+
 msg "Injecting setup scripts..."
 for f in first.sh launch.sh; do
   tmp="/data/local/tmp/$f"
@@ -64,16 +61,14 @@ for f in first.sh launch.sh; do
   su -c "mv -f '$tmp' '$ARCHROOT/root/$f' && chmod 755 '$ARCHROOT/root/$f'"
 done
 
-# Create launcher in Termux
 msg "Creating Termux launcher..."
 mkdir -p "$PREFIX/bin"
 curl -fsSL "$RAW/launch.sh" -o "$PREFIX/bin/start"
 chmod 755 "$PREFIX/bin/start"
 
-# First boot
 msg "Running first boot setup (inside chroot)..."
 su -c "busybox chroot '$ARCHROOT' /bin/bash /root/first.sh"
 
-msg " Installation finished!"
+msg "Installation finished!"
 echo
 echo "Use 'start' to enter Arch chroot."
