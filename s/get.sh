@@ -40,9 +40,22 @@ fi
 # Create resolv.conf & hosts
 msg "Configuring basic network files..."
 su -c "mkdir -p '$ARCHROOT/etc'"
-su -c "echo 'nameserver 8.8.8.8' > '$ARCHROOT/etc/resolv.conf'"
-su -c "echo '127.0.0.1 localhost' > '$ARCHROOT/etc/hosts'"
 
+# tạo file tạm trong /data/local/tmp
+cat > /data/local/tmp/resolv.conf <<'EOF_RESOLV'
+# Content
+nameserver 8.8.8.8
+nameserver 8.8.4.4
+EOF_RESOLV
+
+cat > /data/local/tmp/hosts <<'EOF_HOSTS'
+# Content
+127.0.0.1 localhost
+EOF_HOSTS
+
+# chép đè sang chroot
+su -c "mv -vf /data/local/tmp/resolv.conf '$ARCHROOT/etc/resolv.conf'"
+su -c "mv -vf /data/local/tmp/hosts '$ARCHROOT/etc/hosts'"
 # Copy script setup to rootfs
 msg "Injecting setup scripts..."
 for f in first.sh launch.sh; do
