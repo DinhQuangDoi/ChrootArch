@@ -48,18 +48,17 @@ nameserver 8.8.8.8
 nameserver 8.8.4.4
 EOF_RESOLV
 
-cat > /data/local/tmp/hosts <<'EOF_HOSTS'
+cat > /data/local/tmp/arch/hosts <<'EOF_HOSTS'
 # Content
 127.0.0.1 localhost
 EOF_HOSTS
 
-# chép đè sang chroot
-su -c "mv -vf /data/local/tmp/resolv.conf '$ARCHROOT/etc/resolv.conf'"
-su -c "mv -vf /data/local/tmp/hosts '$ARCHROOT/etc/hosts'"
+su -c "mv -vf /data/local/tmp/arch/resolv.conf '$ARCHROOT/etc/resolv.conf'"
+su -c "mv -vf /data/local/tmp/arch/hosts '$ARCHROOT/etc/hosts'"
 # Copy script setup to rootfs
 msg "Injecting setup scripts..."
 for f in first.sh launch.sh; do
-  tmp="/data/local/tmp/$f"
+  tmp="/data/local/tmp/arch/$f"
   curl -fsSL "$RAW/$f" -o "$tmp"
   su -c "mv -f '$tmp' '$ARCHROOT/root/$f' && chmod 755 '$ARCHROOT/root/$f'"
 done
@@ -74,6 +73,6 @@ chmod 755 "$PREFIX/bin/start"
 msg "Running first boot setup (inside chroot)..."
 su -c "busybox chroot '$ARCHROOT' /bin/bash /root/first.sh"
 
-msg "✅ Installation finished!"
+msg " Installation finished!"
 echo
 echo "Use 'start' to enter Arch chroot."
