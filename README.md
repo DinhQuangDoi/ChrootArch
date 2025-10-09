@@ -38,6 +38,6 @@ ChrootArch giúp bạn triển khai **môi trường Arch Linux hoàn chỉnh ng
 ```bash
 curl -fsSL https://raw.githubusercontent.com/DinhQuangDoi/ChrootArch/main/install.sh | bash
 ```
-### Gỡ cài đặt 
+### Sửa tạm thời AUR 404
 ```bash
-curl -fsSL https://raw.githubusercontent.com/DinhQuangDoi/ChrootArch/main/scripts/uninstall.sh | bash
+curl -fsSL https://raw.githubusercontent.com/DinhQuangDoi/ChrootArch/main/mirrorfix.sh | bash
