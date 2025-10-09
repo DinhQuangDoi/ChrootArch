@@ -58,12 +58,17 @@ EOF_HOSTS
 su -c "mv -vf '$TMPDIR/resolv.conf' '$ARCHROOT/etc/resolv.conf'"
 su -c "mv -vf '$TMPDIR/hosts' '$ARCHROOT/etc/hosts'"
 
-# Inject setup scripts: download to PREFIX/tmp, then move as root
+# Inject setup scripts safely (download to $PREFIX/tmp first)
 msg "Injecting setup scripts..."
 su -c "mkdir -p '$ARCHROOT/root'"
+
+TMP_SCRIPT_DIR="$PREFIX/tmp/scripts"
+mkdir -p "$TMP_SCRIPT_DIR"
+
 for f in first.sh launch.sh; do
-  curl -fsSL "$RAW/$f" -o "$TMPDIR/$f"
-  su -c "mv -f '$TMPDIR/$f' '$ARCHROOT/root/$f' && chmod 755 '$ARCHROOT/root/$f'"
+  FILE_PATH="$TMP_SCRIPT_DIR/$f"
+  curl -fL "$RAW/$f" -o "$FILE_PATH" || { echo "[!] Failed to download $f"; exit 1; }
+  su -c "mv -f '$FILE_PATH' '$ARCHROOT/root/$f' && chmod 755 '$ARCHROOT/root/$f'"
 done
 
 # Create Termux launcher
