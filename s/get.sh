@@ -15,11 +15,13 @@ need curl
 need tar
 need su
 
+# Prepare rootfs dir with root
 msg "Preparing /data/local/tmp/arch ..."
 su -c "mkdir -p '$ARCHROOT' && chmod 755 '$ARCHROOT'" || {
-    echo "[!] Failed to create $ARCHROOT (check root access)"; exit 1;
+  echo "[!] Failed to create $ARCHROOT (check root access)"; exit 1;
 }
 
+# Download rootfs if missing
 if [ ! -s "$ROOTFS_TAR" ]; then
   msg "Downloading ArchLinuxARM rootfs (≈ 500 MB)..."
   curl -fL "$ROOTFS_URL" -o "$ROOTFS_TAR"
@@ -27,6 +29,7 @@ else
   msg "Found existing rootfs archive — skipping download."
 fi
 
+# Extract rootfs once
 if ! su -c "[ -x '$ARCHROOT/bin/bash' ]"; then
   msg "Extracting rootfs (requires root)..."
   su -c "$PREFIX/bin/tar -xzf '$ROOTFS_TAR' -C '$ARCHROOT'"
@@ -34,6 +37,7 @@ else
   msg "Rootfs already extracted — skipping."
 fi
 
+# Seed network files via temp in PREFIX/tmp, then mv as root
 msg "Configuring basic network files..."
 su -c "mkdir -p '$ARCHROOT/etc'"
 
@@ -54,18 +58,21 @@ EOF_HOSTS
 su -c "mv -vf '$TMPDIR/resolv.conf' '$ARCHROOT/etc/resolv.conf'"
 su -c "mv -vf '$TMPDIR/hosts' '$ARCHROOT/etc/hosts'"
 
+# Inject setup scripts: download to PREFIX/tmp, then move as root
 msg "Injecting setup scripts..."
+su -c "mkdir -p '$ARCHROOT/root'"
 for f in first.sh launch.sh; do
-  tmp="/data/local/tmp/$f"
-  curl -fsSL "$RAW/$f" -o "$tmp"
-  su -c "mv -f '$tmp' '$ARCHROOT/root/$f' && chmod 755 '$ARCHROOT/root/$f'"
+  curl -fsSL "$RAW/$f" -o "$TMPDIR/$f"
+  su -c "mv -f '$TMPDIR/$f' '$ARCHROOT/root/$f' && chmod 755 '$ARCHROOT/root/$f'"
 done
 
+# Create Termux launcher
 msg "Creating Termux launcher..."
 mkdir -p "$PREFIX/bin"
 curl -fsSL "$RAW/launch.sh" -o "$PREFIX/bin/start"
 chmod 755 "$PREFIX/bin/start"
 
+# Run first boot setup inside chroot
 msg "Running first boot setup (inside chroot)..."
 su -c "busybox chroot '$ARCHROOT' /bin/bash /root/first.sh"
 
