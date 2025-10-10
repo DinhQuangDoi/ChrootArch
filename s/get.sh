@@ -66,7 +66,7 @@ su -c "mountpoint -q '${ARCHROOT}/dev/pts' || mount -t devpts devpts '${ARCHROOT
 
 # 8) Network+Pacman fixes (run inside chroot, non-interactive)
 msg "Apply network fix inside chroot..."
-su -c "busybox chroot '${ARCHROOT}' /bin/bash -lc '/root/networkfix.sh'"
+su -c "mkdir -p '${ARCHROOT}/etc' && busybox chroot '${ARCHROOT}' /bin/bash -lc '/root/networkfix.sh'"
 
 msg "Apply pacman fix inside chroot (CheckSpace, AID, gnupg)..."
 su -c "busybox chroot '${ARCHROOT}' /bin/bash -lc '/root/pacmanfix.sh'"
