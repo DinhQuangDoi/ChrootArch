@@ -69,13 +69,13 @@ su -c "mv -vf '${TMPDIR}/resolv.conf' '${ARCHROOT}/etc/resolv.conf'"
 su -c "mv -vf '${TMPDIR}/hosts'       '${ARCHROOT}/etc/hosts'"
 
 # Create HTTPS mirrorlist safely (no variable expansion)
-su -c "mkdir -p '${ARCHROOT}/etc/pacman.d'"
-su -c "cat > '${ARCHROOT}/etc/pacman.d/mirrorlist' <<'EOF_MIRROR'
-Server = https://mirror.archlinuxarm.org/$arch/$repo
-Server = https://sg.mirror.archlinuxarm.org/$arch/$repo
-Server = https://us.mirror.archlinuxarm.org/$arch/$repo
-Server = https://de.mirror.archlinuxarm.org/$arch/$repo
-EOF_MIRROR"
+#su -c "mkdir -p '${ARCHROOT}/etc/pacman.d'"
+#su -c "cat > '${ARCHROOT}/etc/pacman.d/mirrorlist' <<'EOF_MIRROR'
+#Server = https://mirror.archlinuxarm.org/$arch/$repo
+#Server = https://sg.mirror.archlinuxarm.org/$arch/$repo
+#Server = https://us.mirror.archlinuxarm.org/$arch/$repo
+#Server = https://de.mirror.archlinuxarm.org/$arch/$repo
+#EOF_MIRROR"
 
 # Step 5: Inject setup scripts
 msg "Injecting setup scripts..."
