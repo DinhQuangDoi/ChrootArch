@@ -1,5 +1,5 @@
 #!/data/data/com.termux/files/usr/bin/bash
-# get.sh — Setup ArchLinuxARM chroot automatically (with built-in network fix)
+# get.sh — Setup ArchLinuxARM chroot automatically (with HTTPS mirrors)
 set -euo pipefail
 
 ARCHROOT="/data/local/tmp/arch"
@@ -19,7 +19,7 @@ need tar
 need su
 
 # Step 1: Prepare rootfs directory
-msg "Preparing ${ARCHROOT} ..."
+msg "Preparing ${ARCHROOT}..."
 su -c "mkdir -p '${ARCHROOT}' && chmod 755 '${ARCHROOT}'" || err "Cannot create ${ARCHROOT}"
 
 # Step 2: Download rootfs if missing
@@ -41,34 +41,31 @@ fi
 # Step 4: Basic network setup inside chroot
 msg "Configuring basic network inside chroot..."
 su -c "
-mkdir -p '${ARCHROOT}/etc' '${ARCHROOT}/proc' '${ARCHROOT}/sys' '${ARCHROOT}/dev' \
-         '${ARCHROOT}/dev/pts' '${ARCHROOT}/sys/class/net'
-mountpoint -q '${ARCHROOT}/proc' || mount -t proc proc '${ARCHROOT}/proc'
-mountpoint -q '${ARCHROOT}/sys'  || mount -t sysfs sysfs '${ARCHROOT}/sys'
-mountpoint -q '${ARCHROOT}/dev'  || mount -o bind /dev '${ARCHROOT}/dev'
+mkdir -p '${ARCHROOT}/etc' '${ARCHROOT}/proc' '${ARCHROOT}/sys' '${ARCHROOT}/dev' '${ARCHROOT}/dev/pts'
+mountpoint -q '${ARCHROOT}/proc'    || mount -t proc proc '${ARCHROOT}/proc'
+mountpoint -q '${ARCHROOT}/sys'     || mount -t sysfs sysfs '${ARCHROOT}/sys'
+mountpoint -q '${ARCHROOT}/dev'     || mount -o bind /dev '${ARCHROOT}/dev'
 mountpoint -q '${ARCHROOT}/dev/pts' || mount -t devpts devpts '${ARCHROOT}/dev/pts'
-mountpoint -q '${ARCHROOT}/sys/class/net' || mount --bind /sys/class/net '${ARCHROOT}/sys/class/net'
 "
 
-# Create temporary network files in Termux then move to Arch
 TMPDIR="${PREFIX}/tmp"
 mkdir -p "$TMPDIR"
 
 cat > "${TMPDIR}/resolv.conf" <<'EOF_RESOLV'
-# Content
+# DNS servers
 nameserver 8.8.8.8
 nameserver 1.1.1.1
 EOF_RESOLV
 
 cat > "${TMPDIR}/hosts" <<'EOF_HOSTS'
-# Content
 127.0.0.1 localhost
+::1 localhost
 EOF_HOSTS
 
-su -c "mv -vf '${TMPDIR}/resolv.conf' '${ARCHROOT}/etc/resolv.conf'"
-su -c "mv -vf '${TMPDIR}/hosts'       '${ARCHROOT}/etc/hosts'"
+su -c "mv -f '${TMPDIR}/resolv.conf' '${ARCHROOT}/etc/resolv.conf'"
+su -c "mv -f '${TMPDIR}/hosts' '${ARCHROOT}/etc/hosts'"
 
-# Step 5: Create HTTPS mirrorlist safely (no bash required)
+# Step 5: Create HTTPS mirrorlist safely (NO bash)
 msg "Creating pacman mirrorlist..."
 cat > "${TMPDIR}/mirrorlist" <<'EOF_MIRROR'
 Server = https://mirror.archlinuxarm.org/$arch/$repo
@@ -76,17 +73,17 @@ Server = https://sg.mirror.archlinuxarm.org/$arch/$repo
 Server = https://us.mirror.archlinuxarm.org/$arch/$repo
 Server = https://de.mirror.archlinuxarm.org/$arch/$repo
 EOF_MIRROR
+
 su -c "mkdir -p '${ARCHROOT}/etc/pacman.d' && mv -f '${TMPDIR}/mirrorlist' '${ARCHROOT}/etc/pacman.d/mirrorlist'"
 
-# Step 6: Inject setup scripts
+# Step 6: Inject setup scripts (first boot + launcher)
 msg "Injecting setup scripts..."
-su -c "mkdir -p '${ARCHROOT}/root'"
 TMP_SCRIPT_DIR="${PREFIX}/tmp/scripts"
 mkdir -p "${TMP_SCRIPT_DIR}"
 
 for f in first.sh launch.sh; do
   curl -fL "${RAW}/${f}" -o "${TMP_SCRIPT_DIR}/${f}"
-  su -c "mv -f '${TMP_SCRIPT_DIR}/${f}' '${ARCHROOT}/root/${f}' && chmod 755 '${ARCHROOT}/root/${f}'"
+  su -c "mkdir -p '${ARCHROOT}/root' && mv -f '${TMP_SCRIPT_DIR}/${f}' '${ARCHROOT}/root/${f}' && chmod 755 '${ARCHROOT}/root/${f}'"
 done
 
 # Step 7: Create Termux launcher
@@ -100,10 +97,10 @@ msg "Testing network inside chroot (ping)..."
 if su -c "busybox chroot '${ARCHROOT}' /usr/bin/ping -c1 -W2 8.8.8.8 >/dev/null 2>&1"; then
   ok "Network reachable inside chroot."
 else
-  echo "[!] Ping failed inside chroot — may be ICMP-blocked. Continue anyway."
+  echo "[!] Ping failed inside chroot — may be ICMP blocked. Continue anyway."
 fi
 
-# Step 9: First boot (sudo + user setup)
+# Step 9: First boot setup
 msg "Running first boot setup inside chroot..."
 su -c "busybox chroot '${ARCHROOT}' /bin/bash /root/first.sh"
 
