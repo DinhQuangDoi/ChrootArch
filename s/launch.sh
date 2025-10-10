@@ -1,19 +1,18 @@
 #!/data/data/com.termux/files/usr/bin/bash
-# start — Arch chroot launcher with robust mounts
+# launcher.sh — start-arch (CLI)
 set -euo pipefail
-
 mnt="/data/local/tmp/arch"
 BB="$(command -v busybox || echo /system/bin/busybox)"
 [ -x "$BB" ] || { echo "[!] BusyBox not found"; exit 1; }
 
-# Prepare and bind essential mounts every run
+# Prepare and bind mounts every run
 su -c "sh -s" <<'ROOT'
 set -eu
 mnt="/data/local/tmp/arch"
 BB="$(command -v busybox || echo /system/bin/busybox)"
 
-mkdir -p "$mnt/dev" "$mnt/proc" "$mnt/sys" "$mnt/dev/pts" "$mnt/sys/class/net" \
-         "$mnt/dev/shm" "$mnt/var/cache" "$mnt/tmp" "$mnt/media/sdcard"
+mkdir -p "$mnt/dev" "$mnt/proc" "$mnt/sys" "$mnt/dev/pts" "$mnt/dev/shm" \
+         "$mnt/var/cache" "$mnt/tmp" "$mnt/media/sdcard" "$mnt/sys/class/net"
 
 $BB mount -o remount,dev,suid /data || true
 
@@ -29,9 +28,12 @@ mountpoint -q "$mnt/dev/shm"   || $BB mount -t tmpfs -o size=256M,mode=1777 tmpf
 chmod 1777 "$mnt/tmp" "$mnt/dev/shm" "$mnt/var/cache" || true
 ROOT
 
-# Resolve target user (fallback to root)
-ARCH_USER="$(su -c "$BB cat $mnt/etc/arch-user.conf 2>/dev/null" || true)"
-[ -n "$ARCH_USER" ] || ARCH_USER="root"
+# Resolve user
+ARCH_USER="root"
+if su -c "[ -f '$mnt/etc/arch-user.conf' ]"; then
+  ARCH_USER="$(su -c "awk -F= '/^ARCH_USER=/{print \$2}' '$mnt/etc/arch-user.conf' | tr -d '\r\n'")"
+  [ -n "$ARCH_USER" ] || ARCH_USER="root"
+fi
 
 # Enter chroot
-su -c "$BB chroot '$mnt' /bin/su - '${ARCH_USER}'"
+exec su -c "$BB chroot '$mnt' /bin/su - '$ARCH_USER'"
