@@ -1,5 +1,5 @@
 #!/data/data/com.termux/files/usr/bin/bash
-# get.sh — Setup ArchLinuxARM chroot automatically (with HTTPS mirrors)
+# get.sh — Download & unpack ArchLinuxARM, then apply fixes and run first boot
 set -euo pipefail
 
 ARCHROOT="/data/local/tmp/arch"
@@ -8,102 +8,72 @@ ROOTFS_URL="http://os.archlinuxarm.org/os/ArchLinuxARM-aarch64-latest.tar.gz"
 ROOTFS_TAR="/data/local/tmp/arch-rootfs.tar.gz"
 RAW="https://raw.githubusercontent.com/DinhQuangDoi/ChrootArch/main/s"
 
-msg() { echo -e "\033[1;96m[*]\033[0m $*"; }
-ok()  { echo -e "\033[1;92m[✓]\033[0m $*"; }
-err() { echo -e "\033[1;91m[!]\033[0m $*" >&2; exit 1; }
+msg(){ echo -e "\033[1;96m[*]\033[0m $*"; }
+ok(){  echo -e "\033[1;92m[✓]\033[0m $*"; }
+die(){ echo -e "\033[1;91m[!]\033[0m $*" >&2; exit 1; }
+need(){ command -v "$1" >/dev/null 2>&1 || die "Missing command: $1"; }
 
-need() { command -v "$1" >/dev/null 2>&1 || err "Missing command: $1"; }
+need curl; need su; need tar
 
-need curl
-need tar
-need su
+# 1) Prepare rootfs dir
+msg "Prepare ${ARCHROOT}..."
+su -c "mkdir -p '${ARCHROOT}' && chmod 755 '${ARCHROOT}'" || die "Cannot create ${ARCHROOT}"
 
-# Step 1: Prepare rootfs directory
-msg "Preparing ${ARCHROOT}..."
-su -c "mkdir -p '${ARCHROOT}' && chmod 755 '${ARCHROOT}'" || err "Cannot create ${ARCHROOT}"
-
-# Step 2: Download rootfs if missing
-if [ ! -s "$ROOTFS_TAR" ]; then
-  msg "Downloading ArchLinuxARM rootfs (≈500 MB)..."
+# 2) Download rootfs if missing
+if ! su -c "[ -s '${ROOTFS_TAR}' ]"; then
+  msg "Downloading ArchLinuxARM rootfs (~500MB)..."
   curl -fL "$ROOTFS_URL" -o "$ROOTFS_TAR"
 else
-  msg "Found existing rootfs archive — skipping download."
+  msg "Found existing rootfs archive — skip download."
 fi
 
-# Step 3: Extract rootfs (as root)
+# 3) Extract rootfs if not yet extracted
 if ! su -c "[ -x '${ARCHROOT}/bin/bash' ]"; then
   msg "Extracting rootfs..."
   su -c "'${PREFIX}/bin/tar' -xzf '${ROOTFS_TAR}' -C '${ARCHROOT}'"
 else
-  msg "Rootfs already extracted — skipping."
+  msg "Rootfs already extracted — skip."
 fi
 
-# Step 4: Basic network setup inside chroot
-msg "Configuring basic network inside chroot..."
-su -c "
-mkdir -p '${ARCHROOT}/etc' '${ARCHROOT}/proc' '${ARCHROOT}/sys' '${ARCHROOT}/dev' '${ARCHROOT}/dev/pts'
-mountpoint -q '${ARCHROOT}/proc'    || mount -t proc proc '${ARCHROOT}/proc'
-mountpoint -q '${ARCHROOT}/sys'     || mount -t sysfs sysfs '${ARCHROOT}/sys'
-mountpoint -q '${ARCHROOT}/dev'     || mount -o bind /dev '${ARCHROOT}/dev'
-mountpoint -q '${ARCHROOT}/dev/pts' || mount -t devpts devpts '${ARCHROOT}/dev/pts'
-"
+# 4) Create essential dirs (as per masterdroid)
+msg "Create aux directories..."
+su -c "mkdir -p '${ARCHROOT}/media/sdcard' '${ARCHROOT}/dev/shm' '${ARCHROOT}/var/cache' '${ARCHROOT}/tmp'"
 
-TMPDIR="${PREFIX}/tmp"
-mkdir -p "$TMPDIR"
-
-cat > "${TMPDIR}/resolv.conf" <<'EOF_RESOLV'
-# DNS servers
-nameserver 8.8.8.8
-nameserver 1.1.1.1
-EOF_RESOLV
-
-cat > "${TMPDIR}/hosts" <<'EOF_HOSTS'
-127.0.0.1 localhost
-::1 localhost
-EOF_HOSTS
-
-su -c "mv -f '${TMPDIR}/resolv.conf' '${ARCHROOT}/etc/resolv.conf'"
-su -c "mv -f '${TMPDIR}/hosts' '${ARCHROOT}/etc/hosts'"
-
-# Step 5: Create HTTPS mirrorlist safely (NO bash)
-msg "Creating pacman mirrorlist..."
-cat > "${TMPDIR}/mirrorlist" <<'EOF_MIRROR'
-Server = https://mirror.archlinuxarm.org/$arch/$repo
-Server = https://sg.mirror.archlinuxarm.org/$arch/$repo
-Server = https://us.mirror.archlinuxarm.org/$arch/$repo
-Server = https://de.mirror.archlinuxarm.org/$arch/$repo
-EOF_MIRROR
-
-su -c "mkdir -p '${ARCHROOT}/etc/pacman.d' && mv -f '${TMPDIR}/mirrorlist' '${ARCHROOT}/etc/pacman.d/mirrorlist'"
-
-# Step 6: Inject setup scripts (first boot + launcher)
-msg "Injecting setup scripts..."
-TMP_SCRIPT_DIR="${PREFIX}/tmp/scripts"
-mkdir -p "${TMP_SCRIPT_DIR}"
-
-for f in first.sh launch.sh; do
-  curl -fL "${RAW}/${f}" -o "${TMP_SCRIPT_DIR}/${f}"
-  su -c "mkdir -p '${ARCHROOT}/root' && mv -f '${TMP_SCRIPT_DIR}/${f}' '${ARCHROOT}/root/${f}' && chmod 755 '${ARCHROOT}/root/${f}'"
+# 5) Download helper scripts locally then move into place
+TMPD="${PREFIX}/tmp/chrootarch.$$"
+mkdir -p "$TMPD"
+for f in networkfix.sh pacmanfix.sh first.sh launcher.sh; do
+  curl -fsSL "${RAW}/${f}" -o "${TMPD}/${f}"
 done
+su -c "mkdir -p '${ARCHROOT}/root'"
+su -c "mv -f '${TMPD}/first.sh' '${ARCHROOT}/root/first.sh' && chmod 755 '${ARCHROOT}/root/first.sh'"
+su -c "mv -f '${TMPD}/networkfix.sh' '${ARCHROOT}/root/networkfix.sh' && chmod 755 '${ARCHROOT}/root/networkfix.sh'"
+su -c "mv -f '${TMPD}/pacmanfix.sh' '${ARCHROOT}/root/pacmanfix.sh' && chmod 755 '${ARCHROOT}/root/pacmanfix.sh'"
 
-# Step 7: Create Termux launcher
-msg "Creating Termux launcher..."
+# 6) Create Termux launcher(s)
+msg "Install Termux launcher(s)..."
 mkdir -p "${PREFIX}/bin"
-curl -fL "${RAW}/launch.sh" -o "${PREFIX}/bin/start"
-chmod 755 "${PREFIX}/bin/start"
+mv -f "${TMPD}/launcher.sh" "${PREFIX}/bin/start-arch"
+chmod 755 "${PREFIX}/bin/start-arch"
 
-# Step 8: Quick connectivity test
-msg "Testing network inside chroot (ping)..."
-if su -c "busybox chroot '${ARCHROOT}' /usr/bin/ping -c1 -W2 8.8.8.8 >/dev/null 2>&1"; then
-  ok "Network reachable inside chroot."
-else
-  echo "[!] Ping failed inside chroot — may be ICMP blocked. Continue anyway."
-fi
+# 7) Minimal mounts for running fixes & first boot
+msg "Bind minimal mounts..."
+su -c "mkdir -p '${ARCHROOT}/proc' '${ARCHROOT}/sys' '${ARCHROOT}/dev' '${ARCHROOT}/dev/pts'"
+su -c "mountpoint -q '${ARCHROOT}/proc' || mount -t proc  proc  '${ARCHROOT}/proc'"
+su -c "mountpoint -q '${ARCHROOT}/sys'  || mount -t sysfs sysfs '${ARCHROOT}/sys'"
+su -c "mountpoint -q '${ARCHROOT}/dev'  || mount -o bind /dev '${ARCHROOT}/dev'"
+su -c "mountpoint -q '${ARCHROOT}/dev/pts' || mount -t devpts devpts '${ARCHROOT}/dev/pts'"
 
-# Step 9: First boot setup
-msg "Running first boot setup inside chroot..."
-su -c "busybox chroot '${ARCHROOT}' /bin/bash /root/first.sh"
+# 8) Network+Pacman fixes (run inside chroot, non-interactive)
+msg "Apply network fix inside chroot..."
+su -c "busybox chroot '${ARCHROOT}' /bin/bash -lc '/root/networkfix.sh'"
 
-echo
-ok "Installation finished!"
-echo "Use 'start' to enter Arch chroot."
+msg "Apply pacman fix inside chroot (CheckSpace, AID, gnupg)..."
+su -c "busybox chroot '${ARCHROOT}' /bin/bash -lc '/root/pacmanfix.sh'"
+
+# 9) First boot (interactive for user create, etc.)
+msg "Run first boot (interactive)..."
+su -c "busybox chroot '${ARCHROOT}' /bin/bash -lc '/root/first.sh'"
+
+ok "Install finished!"
+echo "• Use 'start-arch' to enter Arch chroot (CLI)."
