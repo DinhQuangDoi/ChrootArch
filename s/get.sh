@@ -68,7 +68,17 @@ EOF_HOSTS
 su -c "mv -vf '${TMPDIR}/resolv.conf' '${ARCHROOT}/etc/resolv.conf'"
 su -c "mv -vf '${TMPDIR}/hosts'       '${ARCHROOT}/etc/hosts'"
 
-# Step 5: Inject setup scripts
+# Step 5: Create HTTPS mirrorlist safely (fixed arch variable issue)
+msg "Creating pacman mirrorlist..."
+su -c "mkdir -p '${ARCHROOT}/etc/pacman.d'"
+su -c "bash -c 'cat <<EOF | tee \"${ARCHROOT}/etc/pacman.d/mirrorlist\" >/dev/null
+Server = https://mirror.archlinuxarm.org/\$arch/\$repo
+Server = https://sg.mirror.archlinuxarm.org/\$arch/\$repo
+Server = https://us.mirror.archlinuxarm.org/\$arch/\$repo
+Server = https://de.mirror.archlinuxarm.org/\$arch/\$repo
+EOF'"
+
+# Step 6: Inject setup scripts
 msg "Injecting setup scripts..."
 su -c "mkdir -p '${ARCHROOT}/root'"
 TMP_SCRIPT_DIR="${PREFIX}/tmp/scripts"
@@ -79,13 +89,13 @@ for f in first.sh launch.sh; do
   su -c "mv -f '${TMP_SCRIPT_DIR}/${f}' '${ARCHROOT}/root/${f}' && chmod 755 '${ARCHROOT}/root/${f}'"
 done
 
-# Step 6: Create Termux launcher
+# Step 7: Create Termux launcher
 msg "Creating Termux launcher..."
 mkdir -p "${PREFIX}/bin"
 curl -fL "${RAW}/launch.sh" -o "${PREFIX}/bin/start"
 chmod 755 "${PREFIX}/bin/start"
 
-# Step 7: Quick connectivity test
+# Step 8: Quick connectivity test
 msg "Testing network inside chroot (ping)..."
 if su -c "busybox chroot '${ARCHROOT}' /usr/bin/ping -c1 -W2 8.8.8.8 >/dev/null 2>&1"; then
   ok "Network reachable inside chroot."
@@ -93,7 +103,7 @@ else
   echo "[!] Ping failed inside chroot — may be ICMP-blocked. Continue anyway."
 fi
 
-# Step 8: First boot (sudo + user setup)
+# Step 9: First boot (sudo + user setup)
 msg "Running first boot setup inside chroot..."
 su -c "busybox chroot '${ARCHROOT}' /bin/bash /root/first.sh"
 
